@@ -126,6 +126,6 @@ if __name__ == "__main__":
         inbrowser=True,
         show_error=True,
         debug=True,
-        share=False,  # Explicitly disable public sharing
+        share=True,  # Explicitly disable public sharing
         prevent_thread_lock=True  # Keep the interface responsive
     )
