@@ -106,12 +106,6 @@ with gr.Blocks(css=css, theme=gr.themes.Default()) as interface:
         outputs=[response, status, history]
     )
     
-    status.change(
-        lambda x: gr.Textbox(value=x, visible=bool(x)), 
-        inputs=[status], 
-        outputs=[status]
-    )
-    
     gr.HTML("""
     <style>
         .status-box {
