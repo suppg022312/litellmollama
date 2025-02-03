@@ -1,0 +1,10 @@
+model_list:
+- model_name: olmo2:13b
+  litellm_params:
+    model: ollama/olmo2:13b
+    api_base: http://10.2.14.131:11434
+    api_key: "ollama"
+
+litellm_settings:
+  drop_params: true
+  set_verbose: true
