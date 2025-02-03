@@ -5,6 +5,44 @@ from pathlib import Path
 import gradio as gr
 import traceback
 import re
+import subprocess
+import pkg_resources
+
+def install_package(package):
+    """Install a Python package using pip"""
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def get_required_imports(code_content):
+    """Extract import statements from the code"""
+    imports = []
+    lines = code_content.split('\n')
+    for line in lines:
+        if line.startswith('import '):
+            imports.extend(line.replace('import ', '').split(','))
+        elif line.startswith('from '):
+            module = line.split(' import ')[0].replace('from ', '')
+            imports.append(module)
+    return [imp.strip().split('.')[0] for imp in imports]
+
+def ensure_dependencies(code_content):
+    """Check and install required packages"""
+    required_imports = get_required_imports(code_content)
+    installed_packages = {pkg.key for pkg in pkg_resources.working_set}
+    missing_packages = []
+    installation_status = []
+
+    for package in required_imports:
+        if package not in ['os', 'sys', 'pathlib', 're', 'time', 'datetime', 'json', 'math']:
+            if package not in installed_packages:
+                missing_packages.append(package)
+                status = install_package(package)
+                installation_status.append(f"Installing {package}: {'Success' if status else 'Failed'}")
+
+    return installation_status
 
 def list_generated_files():
     """List all generated project files in the current directory"""
@@ -53,6 +91,14 @@ def load_code_content(file_path):
 def execute_code(code_content, output_capture):
     """Execute the code and capture its output"""
     try:
+        # Install any missing dependencies
+        installation_status = ensure_dependencies(code_content)
+        if installation_status:
+            print("\nDependency Installation Results:")
+            for status in installation_status:
+                print(status)
+            print()
+
         # Redirect stdout to capture print statements
         old_stdout = sys.stdout
         sys.stdout = output_capture
@@ -61,7 +107,11 @@ def execute_code(code_content, output_capture):
         namespace = {}
         exec(code_content, namespace)
         
-        return "Code executed successfully!", ""
+        status = "Code executed successfully!"
+        if installation_status:
+            status += f"\n\nInstalled dependencies:\n" + "\n".join(installation_status)
+        
+        return status, ""
     except Exception as e:
         return "Error during execution!", f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
     finally:
