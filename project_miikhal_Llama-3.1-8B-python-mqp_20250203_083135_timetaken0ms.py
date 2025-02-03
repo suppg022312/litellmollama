@@ -1,0 +1,1 @@
+In the provided request: 'write me an expenses form app in python ', the task was to write an expenses form app in Python. The variables identified are: income, expenses. The operations are: addition and subtraction. The result is the net income after expenses have been deducted from income.
