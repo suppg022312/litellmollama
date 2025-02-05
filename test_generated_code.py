@@ -76,9 +76,19 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
         
+        # Check if response is valid JSON
+        try:
+            response_json = response.json()
+        except json.JSONDecodeError as e:
+            return {
+                "success": False,
+                "response": None,
+                "error": f"Invalid JSON response: {str(e)}\nResponse text: {response.text}"
+            }
+        
         return {
             "success": True,
-            "response": response.json(),
+            "response": response_json,
             "error": None
         }
     except requests.exceptions.RequestException as e:
@@ -122,53 +132,42 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     
     # Test each model
     for idx, model in enumerate(models, 1):
-        try:
-            model_start_time = time.time()
-            progress(idx/total_models, desc=f"Testing model {idx}/{total_models}: {model}")
+        model_start_time = time.time()
+        progress(idx/total_models, desc=f"Testing model {idx}/{total_models}: {model}")
+        
+        results.append(f"\nTesting model ({idx}/{total_models}): {model}")
+        results.append(f"Sending request...")
+        
+        # Call API
+        api_result = call_api_endpoint(model, task)
+        execution_time = time.time() - model_start_time
+        
+        if api_result["success"]:
+            response_data = api_result["response"]
+            # Extract response text - Ollama format
+            response_text = response_data.get("response", "No response content")
             
-            results.append(f"\nTesting model ({idx}/{total_models}): {model}")
-            results.append(f"Sending request...")
+            # Save response to file
+            filename = save_response_to_file(model, response_text)
+            created_files.append(filename)
             
-            # Call API with timeout
-            api_result = call_api_endpoint(model, task)
-            execution_time = time.time() - model_start_time
-            
-            if api_result["success"]:
-                response_data = api_result["response"]
-                # Extract response text - Ollama format
-                response_text = response_data.get("response", "No response content")
-                
-                # Save response to file
-                filename = save_response_to_file(model, response_text)
-                created_files.append(filename)
-                
-                results.extend([
-                    "✅ API call successful",
-                    f"Execution time: {format_time(execution_time)}",
-                    f"Response saved to: {filename}",
-                    f"{'='*50}\n"
-                ])
-            else:
-                results.extend([
-                    "❌ API call failed",
-                    f"Execution time: {format_time(execution_time)}",
-                    "Error:",
-                    api_result["error"],
-                    f"{'='*50}\n"
-                ])
-            
-        except Exception as e:
             results.extend([
-                f"❌ Error processing model {model}:",
-                str(e),
-                traceback.format_exc(),
+                "✅ API call successful",
+                f"Execution time: {format_time(execution_time)}",
+                f"Response saved to: {filename}",
                 f"{'='*50}\n"
             ])
-            continue
+        else:
+            results.extend([
+                "❌ API call failed",
+                f"Execution time: {format_time(execution_time)}",
+                "Error:",
+                api_result["error"],
+                f"{'='*50}\n"
+            ])
         
-        # Update progress after each model
-        progress_text = "\n".join(results)
-        yield progress_text
+        # Yield progress updates
+        yield "\n".join(results)
     
     # Add summary
     end_time = datetime.now()
@@ -179,7 +178,6 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
         f"Finished: {end_time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Total duration: {format_time(execution_duration)}",
         f"Models tested: {total_models}",
-        f"Successful files created: {len(created_files)}",
         "\nCreated files:",
         *[f"- {f}" for f in created_files],
         f"\nTask completed!"
