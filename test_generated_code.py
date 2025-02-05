@@ -7,7 +7,15 @@ import time
 import requests
 from typing import List, Dict
 import yaml
-import json
+
+def load_config() -> Dict:
+    """Load configuration from config.yaml"""
+    try:
+        with open("litellm/proxy_server_config.yaml", "r") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return {"model_list": []}
 
 def format_time(seconds: float) -> str:
     """Format time in seconds to a readable string"""
@@ -34,15 +42,29 @@ def save_response_to_file(model: str, response: str) -> str:
 def call_api_endpoint(model: str, prompt: str) -> Dict:
     """Make API call to test the model with the given prompt"""
     try:
+        # Get API base URL from config
+        config = load_config()
+        model_config = next((m for m in config["model_list"] if m["model_name"] == model), None)
+        
+        if not model_config:
+            return {
+                "success": False,
+                "response": None,
+                "error": f"Model {model} not found in config"
+            }
+        
+        api_base = model_config["litellm_params"]["api_base"]
+        actual_model = model_config["litellm_params"]["model"]
+        
         # Construct API request for Ollama
-        url = f"http://10.2.14.131:11434/api/generate"
+        url = f"{api_base}/api/generate"
         headers = {
             "Content-Type": "application/json"
         }
         
         # Ollama format
         data = {
-            "model": model,
+            "model": actual_model.split('/')[-1],
             "prompt": prompt,
             "stream": False
         }
@@ -83,16 +105,9 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         }
 
 def get_available_models() -> List[str]:
-    """Get list of available models from http://10.2.14.131:4000"""
-    try:
-        response = requests.get("http://10.2.14.131:4000/api/tags")
-        response.raise_for_status()
-        data = response.json()
-        models = [item['name'] for item in data['models']]
-        return models
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching models from API: {e}")
-        return []
+    """Get list of available models from config"""
+    config = load_config()
+    return [model["model_name"] for model in config["model_list"]]
 
 def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     """Test the given task against all available models"""
@@ -111,7 +126,7 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     total_models = len(models)
     
     if not models:
-        return "Error: No models found from http://10.2.14.131:4000"
+        return "Error: No models found in config.yaml"
     
     results.append(f"Total models to test: {total_models}\n{'='*50}\n")
     
@@ -170,6 +185,9 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     
     return "\n".join(results)
 
+# Importing StringIO here since it's used in multiple functions
+from io import StringIO
+
 # Create the Gradio interface
 with gr.Blocks(title="Model Task Tester") as interface:
     gr.Markdown(
@@ -177,7 +195,7 @@ with gr.Blocks(title="Model Task Tester") as interface:
         # Model Task Tester
         Test your task against all configured models
         
-        Current models (from http://10.2.14.131:4000):
+        Current models (from config.yaml):
         {}
         """.format("\n".join(f"- {model}" for model in get_available_models()))
     )
@@ -204,6 +222,15 @@ with gr.Blocks(title="Model Task Tester") as interface:
     )
 
 if __name__ == "__main__":
+    # Check if yaml module is installed
+    try:
+        import yaml
+    except ImportError:
+        print("Installing PyYAML...")
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyYAML"])
+        import yaml
+    
     interface.launch(
         server_name="0.0.0.0",
         inbrowser=True,
