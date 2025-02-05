@@ -8,6 +8,8 @@ import re
 import subprocess
 import pkg_resources
 from typing import List, Tuple
+import time
+from datetime import datetime
 
 def install_package(package):
     """Install a Python package using pip"""
@@ -92,8 +94,9 @@ def load_code_content(file_path):
     except Exception as e:
         return f"Error loading file {file_path}: {str(e)}"
 
-def execute_code(code_content, output_capture) -> Tuple[str, str]:
+def execute_code(code_content, output_capture) -> Tuple[str, str, float]:
     """Execute the code and capture its output"""
+    start_time = time.time()
     try:
         # Install any missing dependencies
         installation_status = ensure_dependencies(code_content)
@@ -115,39 +118,86 @@ def execute_code(code_content, output_capture) -> Tuple[str, str]:
         if installation_status:
             status += f"\n\nInstalled dependencies:\n" + "\n".join(installation_status)
         
-        return status, ""
+        execution_time = time.time() - start_time
+        return status, "", execution_time
     except Exception as e:
-        return "Error during execution!", f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        execution_time = time.time() - start_time
+        return "Error during execution!", f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}", execution_time
     finally:
         # Restore stdout
         sys.stdout = old_stdout
 
-def test_against_all_models(task: str) -> str:
+def format_time(seconds: float) -> str:
+    """Format time in seconds to a readable string"""
+    if seconds < 60:
+        return f"{seconds:.2f} seconds"
+    minutes = int(seconds // 60)
+    seconds = seconds % 60
+    return f"{minutes} minutes {seconds:.2f} seconds"
+
+def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     """Run the task against all available model files and collect results"""
     all_files = list_generated_files()
-    results = []
+    if not all_files:
+        return "No model files found in the current directory!"
     
-    for file in all_files:
+    results = []
+    total_files = len(all_files)
+    
+    # Header with task and start time
+    start_time = datetime.now()
+    results.append(
+        f"Starting task execution at {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"Task: {task}\n"
+        f"Total models to test: {total_files}\n"
+        f"{'='*50}\n"
+    )
+    
+    for idx, file in enumerate(all_files, 1):
+        model_name = file.replace('project_', '').replace('.py', '')
+        progress(idx/total_files, desc=f"Testing model {idx}/{total_files}: {model_name}")
+        
         # Load and test the code
+        results.append(f"\nTesting model ({idx}/{total_files}): {model_name}")
+        results.append(f"Loading model file: {file}")
+        
         code_content = load_code_content(file)
+        if code_content.startswith("Error loading file"):
+            results.append(f"❌ {code_content}")
+            continue
+            
         output_capture = StringIO()
-        status, error = execute_code(code_content, output_capture)
+        status, error, execution_time = execute_code(code_content, output_capture)
         output = output_capture.getvalue()
         output_capture.close()
         
         # Format the result for this model
-        model_name = file.replace('project_', '').replace('.py', '')
-        results.append(
-            f"\n{'='*50}\n"
-            f"Model: {model_name}\n"
-            f"Status: {status}\n"
-            f"Output:\n{output}\n"
-            f"Errors:\n{error}\n"
+        results.extend([
+            f"Status: {'✅ ' if 'successfully' in status else '❌ '}{status}",
+            f"Execution time: {format_time(execution_time)}",
+            "Output:",
+            output if output.strip() else "(No output)",
+            "Errors:" if error else "",
+            error if error else "(No errors)",
             f"{'='*50}\n"
-        )
+        ])
+        
+        # Yield progress updates
+        yield "\n".join(results)
     
-    # Combine all results
-    return "Task Execution Results:\n" + "\n".join(results)
+    # Add summary at the end
+    end_time = datetime.now()
+    execution_duration = (end_time - start_time).total_seconds()
+    results.extend([
+        f"\nExecution Summary:",
+        f"Started: {start_time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Finished: {end_time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Total duration: {format_time(execution_duration)}",
+        f"Models tested: {total_files}",
+        f"\nTask completed!"
+    ])
+    
+    return "\n".join(results)
 
 # Importing StringIO here since it's used in multiple functions
 from io import StringIO
