@@ -25,6 +25,20 @@ def format_time(seconds: float) -> str:
     seconds = seconds % 60
     return f"{minutes} minutes {seconds:.2f} seconds"
 
+def save_response_to_file(model: str, response: str) -> str:
+    """Save model response to a file and return the filename"""
+    # Clean model name for filename
+    clean_model = model.replace(':', '_').replace('/', '_')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"test_{clean_model}_{timestamp}.py"
+    
+    try:
+        with open(filename, 'w') as f:
+            f.write(response)
+        return filename
+    except Exception as e:
+        return f"Error saving file: {str(e)}"
+
 def call_api_endpoint(model: str, prompt: str) -> Dict:
     """Make API call to test the model with the given prompt"""
     try:
@@ -43,14 +57,14 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         actual_model = model_config["litellm_params"]["model"]
         
         # Construct API request for Ollama
-        url = f"{api_base}/api/generate"  # Updated endpoint
+        url = f"{api_base}/api/generate"
         headers = {
             "Content-Type": "application/json"
         }
         
         # Ollama format
         data = {
-            "model": actual_model.split('/')[-1],  # Remove 'ollama/' prefix
+            "model": actual_model.split('/')[-1],
             "prompt": prompt,
             "stream": False
         }
@@ -88,6 +102,7 @@ def get_available_models() -> List[str]:
 def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     """Test the given task against all available models"""
     results = []
+    created_files = []
     start_time = datetime.now()
     
     # Header
@@ -121,11 +136,15 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
             response_data = api_result["response"]
             # Extract response text - Ollama format
             response_text = response_data.get("response", "No response content")
+            
+            # Save response to file
+            filename = save_response_to_file(model, response_text)
+            created_files.append(filename)
+            
             results.extend([
                 "✅ API call successful",
                 f"Execution time: {format_time(execution_time)}",
-                "Response:",
-                response_text,
+                f"Response saved to: {filename}",
                 f"{'='*50}\n"
             ])
         else:
@@ -149,6 +168,8 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
         f"Finished: {end_time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Total duration: {format_time(execution_duration)}",
         f"Models tested: {total_models}",
+        "\nCreated files:",
+        *[f"- {f}" for f in created_files],
         f"\nTask completed!"
     ])
     
