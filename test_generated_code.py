@@ -233,7 +233,7 @@ if __name__ == "__main__":
     
     interface.launch(
         server_name="0.0.0.0",  # Allows external connections
-        server_port=7860,       # Specify a fixed port
+        server_port=7870,       # Try a different port
         share=True,             # Creates a public URL
         inbrowser=True,
         show_error=True,
