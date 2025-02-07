@@ -222,7 +222,6 @@ with gr.Blocks(title="Model Task Tester") as interface:
     )
 
 if __name__ == "__main__":
-    # Check if yaml module is installed
     try:
         import yaml
     except ImportError:
@@ -231,10 +230,26 @@ if __name__ == "__main__":
         subprocess.check_call([sys.executable, "-m", "pip", "install", "PyYAML"])
         import yaml
     
+    # Get the actual network IP address
+    import socket
+    def get_local_ip():
+        try:
+            # Create a socket that connects to an external server
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "Could not determine IP"
+    
+    local_ip = get_local_ip()
+    print(f"\nTo access from another PC on your network, use: http://{local_ip}:7870\n")
+    
     interface.launch(
-        server_name="0.0.0.0",  # Allows external connections
-        server_port=7870,       # Try a different port
-        share=False,            # Disable public URL creation
+        server_name="0.0.0.0",
+        server_port=7870,
+        share=False,
         inbrowser=True,
         show_error=True,
         debug=True
