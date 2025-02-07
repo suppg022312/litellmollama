@@ -455,10 +455,30 @@ with gr.Blocks(title="Model Task Tester") as interface:
     )
     
     with gr.Row():
+        def save_task(task):
+            """Save the task to a file"""
+            try:
+                with open("last_task.json", 'w') as f:
+                    json.dump({"last_task": task}, f)
+            except Exception as e:
+                print(f"Error saving task: {e}")
+
+        def load_task():
+            """Load the task from a file"""
+            try:
+                if os.path.exists("last_task.json"):
+                    with open("last_task.json", 'r') as f:
+                        data = json.load(f)
+                        return data.get("last_task", "")
+            except Exception as e:
+                print(f"Error loading task: {e}")
+            return ""
+
         task_input = gr.Textbox(
             label="Enter your task",
             placeholder="Describe what you want the models to do...",
-            lines=3
+            lines=3,
+            value=load_task()  # Load the last task on startup
         )
     
     test_btn = gr.Button("Run Task Against All Models")
