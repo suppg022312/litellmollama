@@ -25,12 +25,40 @@ def format_time(seconds: float) -> str:
     seconds = seconds % 60
     return f"{minutes} minutes {seconds:.2f} seconds"
 
-def save_response_to_file(model: str, response: str, prompt: str) -> str:
+def create_test_session_folder() -> str:
+    """Create a unique folder for this test session"""
+    # Generate a unique folder name using timestamp and random words
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Create a descriptive folder name using timestamp
+    folder_name = f"test_session_{timestamp}"
+    
+    try:
+        # Create the folder
+        os.makedirs(folder_name, exist_ok=True)
+        
+        # Move any existing .md files from previous runs
+        for file in os.listdir('.'):
+            if file.endswith('.md'):
+                try:
+                    shutil.move(file, os.path.join(folder_name, file))
+                except Exception as e:
+                    print(f"Could not move file {file}: {e}")
+        
+        return folder_name
+    except Exception as e:
+        print(f"Error creating session folder: {e}")
+        return "."  # Return current directory as fallback
+
+def save_response_to_file(model: str, response: str, prompt: str, session_folder: str) -> str:
     """Save model response to a file and return the filename"""
     # Clean model name for filename
     clean_model = model.replace(':', '_').replace('/', '_')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f"test_{clean_model}_{timestamp}.md"
+    
+    # Create full path including session folder
+    filepath = os.path.join(session_folder, filename)
     
     # Format the content as proper markdown
     markdown_content = f"""# Model Response: {model}
@@ -56,9 +84,9 @@ Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
     
     try:
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
-        return filename
+        return filepath
     except Exception as e:
         return f"Error saving file: {str(e)}"
 
@@ -150,17 +178,70 @@ def get_available_models() -> List[str]:
     config = load_config()
     return [model["model_name"] for model in config["model_list"]]
 
+def create_summary_file(task: str, model_results: List[Dict], execution_time: float, session_folder: str) -> str:
+    """Create a summary markdown file of all model results"""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"summary_report_{timestamp}.md"
+    filepath = os.path.join(session_folder, filename)
+    
+    summary_content = f"""# Model Testing Summary Report
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Task
+```
+{task}
+```
+
+## Results Summary
+- Total Models Tested: {len(model_results)}
+- Total Execution Time: {format_time(execution_time)}
+- Success Rate: {sum(1 for r in model_results if r['success'])} / {len(model_results)}
+
+## Detailed Results
+
+| Model | Status | Response Time | Details |
+|-------|--------|---------------|----------|
+"""
+    
+    for result in model_results:
+        status_icon = "✅" if result['success'] else "❌"
+        details = result.get('filename', '') if result['success'] else result.get('error', 'Unknown error')
+        response_time = format_time(result['execution_time'])
+        
+        summary_content += f"| {result['model']} | {status_icon} | {response_time} | {details} |\n"
+
+    summary_content += "\n\n## Failed Models Details\n\n"
+    failed_models = [r for r in model_results if not r['success']]
+    if failed_models:
+        for failure in failed_models:
+            summary_content += f"""### {failure['model']}
+- Error: {failure.get('error', 'Unknown error')}
+- Execution Time: {format_time(failure['execution_time'])}
+"""
+    else:
+        summary_content += "No failed models! 🎉\n"
+    
+    try:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(summary_content)
+        return filepath
+    except Exception as e:
+        return f"Error saving summary file: {str(e)}"
+
 def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     """Test the given task against all available models"""
+    # Create a new session folder at the start of each test
+    session_folder = create_test_session_folder()
+    
     results = []
     created_files = []
+    model_results = []
     start_time = datetime.now()
     
-    # Header
-    results.append(
-        f"Starting task execution at {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"Task: {task}\n"
-    )
+    # Add session information to results
+    results.append(f"Created new test session folder: {session_folder}")
+    results.append(f"Starting task execution at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    results.append(f"Task: {task}\n")
     
     # Get available models
     models = get_available_models()
@@ -173,6 +254,12 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
     
     # Test each model
     for idx, model in enumerate(models, 1):
+        model_result = {
+            'model': model,
+            'success': False,
+            'execution_time': 0
+        }
+        
         try:
             model_start_time = time.time()
             progress(idx/total_models, desc=f"Testing model {idx}/{total_models}: {model}")
@@ -183,20 +270,22 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
             # Call API with timeout
             api_result = call_api_endpoint(model, task)
             execution_time = time.time() - model_start_time
+            model_result['execution_time'] = execution_time
             
             if api_result["success"]:
                 response_data = api_result["response"]
-                # Extract response text - Ollama format
                 response_text = response_data.get("response", "No response content")
                 
-                # Save response to markdown file with proper formatting
                 filename = save_response_to_file(
                     model=model,
                     response=response_text,
-                    prompt=task  # Include the original task
+                    prompt=task,
+                    session_folder=session_folder
                 )
                 
                 created_files.append(filename)
+                model_result['success'] = True
+                model_result['filename'] = filename
                 
                 results.extend([
                     "✅ API call successful",
@@ -205,37 +294,44 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
                     f"{'='*50}\n"
                 ])
             else:
+                error_msg = api_result["error"]
+                model_result['error'] = error_msg
                 results.extend([
                     "❌ API call failed",
                     f"Execution time: {format_time(execution_time)}",
                     "Error:",
-                    api_result["error"],
+                    error_msg,
                     f"{'='*50}\n"
                 ])
             
         except Exception as e:
+            error_msg = f"{str(e)}\n{traceback.format_exc()}"
+            model_result['error'] = error_msg
             results.extend([
                 f"❌ Error processing model {model}:",
-                str(e),
-                traceback.format_exc(),
+                error_msg,
                 f"{'='*50}\n"
             ])
-            continue
         
-        # Update progress after each model
+        model_results.append(model_result)
         progress_text = "\n".join(results)
         yield progress_text
     
-    # Add summary
+    # Create summary file in the session folder
     end_time = datetime.now()
     execution_duration = (end_time - start_time).total_seconds()
+    summary_file = create_summary_file(task, model_results, execution_duration, session_folder)
+    
+    # Add summary to results
     results.extend([
         f"\nExecution Summary:",
+        f"Session folder: {session_folder}",
         f"Started: {start_time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Finished: {end_time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Total duration: {format_time(execution_duration)}",
-        f"Models tested: {total_models}",
+        f"Models tested: {len(models)}",
         f"Successful files created: {len(created_files)}",
+        f"\nSummary report saved to: {summary_file}",
         "\nCreated files:",
         *[f"- {f}" for f in created_files],
         f"\nTask completed!"
