@@ -30,11 +30,28 @@ def save_response_to_file(model: str, response: str) -> str:
     # Clean model name for filename
     clean_model = model.replace(':', '_').replace('/', '_')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"test_{clean_model}_{timestamp}.py"
+    filename = f"test_{clean_model}_{timestamp}.md"
+    
+    # Add markdown formatting instructions to the prompt
+    markdown_template = """# Model Response from {model}
+Generated on: {timestamp}
+
+Below is the code solution with proper markdown formatting and copyable code snippets:
+
+{response}
+
+## How to Use
+Copy the code snippets above and follow the implementation instructions.
+"""
+    formatted_content = markdown_template.format(
+        model=model,
+        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        response=response
+    )
     
     try:
         with open(filename, 'w') as f:
-            f.write(response)
+            f.write(formatted_content)
         return filename
     except Exception as e:
         return f"Error saving file: {str(e)}"
@@ -56,6 +73,21 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         api_base = model_config["litellm_params"]["api_base"]
         actual_model = model_config["litellm_params"]["model"]
         
+        # Add markdown formatting instructions to the prompt
+        enhanced_prompt = f"""Please provide a solution to the following task using proper markdown formatting. 
+Include code snippets wrapped in triple backticks with the appropriate language identifier.
+Make the code easily copyable and include clear section headers.
+
+Task: {prompt}
+
+Format your response with:
+1. Clear markdown headers (##)
+2. Code snippets in ```language
+3. Brief explanations before and after code blocks
+4. Any necessary setup or installation instructions
+5. Example usage if applicable
+"""
+        
         # Construct API request for Ollama
         url = f"{api_base}/api/generate"
         headers = {
@@ -65,7 +97,7 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         # Ollama format
         data = {
             "model": actual_model.split('/')[-1],
-            "prompt": prompt,
+            "prompt": enhanced_prompt,
             "stream": False
         }
         
