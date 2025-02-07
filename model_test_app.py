@@ -2,6 +2,29 @@ import gradio as gr
 import requests
 import yaml
 from pathlib import Path
+import json
+
+# Constants
+LAST_PROMPT_FILE = "last_prompt.json"
+
+def save_last_prompt(prompt):
+    """Save the last prompt to a file"""
+    try:
+        with open(LAST_PROMPT_FILE, 'w') as f:
+            json.dump({"last_prompt": prompt}, f)
+    except Exception as e:
+        print(f"Error saving last prompt: {e}")
+
+def load_last_prompt():
+    """Load the last prompt from file"""
+    try:
+        if Path(LAST_PROMPT_FILE).exists():
+            with open(LAST_PROMPT_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get("last_prompt", "")
+    except Exception as e:
+        print(f"Error loading last prompt: {e}")
+    return ""
 
 # Read and sort models from proxy config
 proxy_config_path = Path("litellm/proxy_server_config.yaml")
@@ -11,6 +34,9 @@ with open(proxy_config_path) as f:
 models = sorted([model["model_name"] for model in config["model_list"]])
 
 def query_model(prompt, selected_model, progress=gr.Progress(), history=gr.State([])):  # Initialize with empty list
+    # Save the prompt before processing
+    save_last_prompt(prompt)
+    
     headers = {
         "Content-Type": "application/json",
         # No authorization needed
@@ -92,7 +118,13 @@ with gr.Blocks(css=css, theme=gr.themes.Default()) as interface:
         # Right column for inputs/outputs
         with gr.Column(scale=3):
             with gr.Row():
-                prompt = gr.Textbox(lines=3, label="Prompt", placeholder="Enter your coding request...")
+                # Load the last prompt when creating the textbox
+                prompt = gr.Textbox(
+                    lines=3, 
+                    label="Prompt", 
+                    placeholder="Enter your coding request...",
+                    value=load_last_prompt()  # Set initial value from saved prompt
+                )
                 model_select = gr.Dropdown(models, label="Model", value=models[0] if models else "")
             
             submit_btn = gr.Button("Submit", variant="primary")
@@ -126,6 +158,5 @@ if __name__ == "__main__":
         inbrowser=True,
         show_error=True,
         debug=True,
-        share=True,  # Explicitly disable public sharing
-        prevent_thread_lock=True  # Keep the interface responsive
+        share=True
     )

@@ -1,4 +1,10 @@
 model_list:
+- model_name: miikhal/Llama-3.1-8B-python-mqp
+  litellm_params:
+    model: ollama/Llama-3.1-8B-python-mqp
+    api_base: http://10.2.14.131:11434
+    api_key: "ollama"
+
 - model_name: olmo2:13b
   litellm_params:
     model: ollama/olmo2:13b
