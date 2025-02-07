@@ -1,0 +1,258 @@
+# Model Response: llama3.2
+Generated on: 2025-02-07 21:11:24
+
+
+<style>
+.copy-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 1;
+}
+.code-container {
+    position: relative;
+    margin: 10px 0;
+}
+.copy-button:hover {
+    background-color: #45a049;
+}
+.copy-button:active {
+    background-color: #3d8b40;
+}
+</style>
+
+<script>
+function copyCode(buttonElement) {
+    const codeBlock = buttonElement.parentElement.querySelector('code');
+    const range = document.createRange();
+    range.selectNode(codeBlock);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    try {
+        document.execCommand('copy');
+        buttonElement.textContent = 'Copied!';
+        setTimeout(() => {
+            buttonElement.textContent = 'Copy';
+        }, 2000);
+    } catch(e) {
+        console.error('Failed to copy text:', e);
+        buttonElement.textContent = 'Failed to copy';
+    }
+    window.getSelection().removeAllRanges();
+}
+</script>
+
+
+## Original Task
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```
+python cribbage card game
+```
+</div>
+
+## Model Solution
+**Cribbage Card Game in Python**
+
+Cribbage is a popular card game that involves counting points for pairs, runs, and combinations of cards. Here's a simple implementation of the game in Python:
+
+### Dependencies
+
+* `random` module for shuffling the deck
+* `collections` module for grouping cards by suit and rank
+
+### Code
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```python
+import random
+from collections import defaultdict
+
+# Define the suits and ranks of a standard deck of cards
+suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
+
+# Define the values of each rank
+values = {
+    '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    '10': 10, 'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14
+}
+
+# Function to create a deck of cards
+def create_deck():
+    deck = [{'suit': suit, 'rank': rank} for suit in suits for rank in ranks]
+    random.shuffle(deck)
+    return deck
+
+# Function to deal two cards from the deck
+def deal_two_cards(deck):
+    return deck.pop(), deck.pop()
+
+# Function to calculate the score for a hand
+def calculate_score(hand):
+    # Count pairs and runs
+    pairs = 0
+    runs = 0
+    for i in range(len(hand) - 1):
+        if hand[i]['rank'] == hand[i+1]['rank']:
+            pairs += 1
+        elif (values[hand[i]['rank']] + values[hand[i+1]['rank']]) % 10 == 0:
+            runs += 1
+
+    # Add points for combinations of cards
+    combo_points = 0
+    for i in range(len(hand) - 2):
+        if hand[i]['rank'] == 'Ace' and values[hand[i]['rank']] + values[hand[i+1]['rank']] >= 15:
+            combo_points += 3
+        elif hand[i]['rank'] == 'Jack' and values[hand[i]['rank']] + values[hand[i+1]['rank']] >= 8:
+            combo_points += 2
+
+    return pairs * 2, runs * 2 + combo_points
+
+# Function to determine the winner of a game
+def play_game():
+    deck = create_deck()
+    player_hand = deal_two_cards(deck)
+    dealer_hand = deal_two_cards(deck)
+
+    print("Player's hand:", [card['rank'] + ' of ' + card['suit'] for card in player_hand])
+    print("Dealer's up card:", [card['rank'] + ' of ' + card['suit'] for card in dealer_hand if deck.index(card) < 2][0])
+
+    score = calculate_score(player_hand)
+    print("Player's score:", score)
+
+    # Deal the crib
+    crib = [deck.pop() for _ in range(4)]
+
+    print("Crib:", [card['rank'] + ' of ' + card['suit'] for card in crib])
+
+    score += calculate_score(crib)
+
+    print("Dealer's hand:", [card['rank'] + ' of ' + card['suit'] for card in dealer_hand])
+    score += calculate_score(dealer_hand)
+
+    print("Dealer's score:", score)
+    if score > 29:
+        return "Player wins"
+    else:
+        return "Dealer wins"
+
+# Run the game
+print(play_game())
+```
+</div>
+### How to Play
+
+1. The deck is shuffled and two cards are dealt to each player.
+2. The player scores points for pairs, runs, and combinations of cards in their hand.
+3. The dealer reveals one card from their hand (the up card).
+4. The crib (four cards) is drawn and added to the player's score.
+5. The player's score is compared to the dealer's score.
+6. If the player's score is higher, they win.
+
+Note that this implementation does not include all the rules of cribbage, such as counting points for combinations of three or four cards, or determining the winner based on a combination of scores.
+
+## Complete Code Summary
+This section contains all the necessary code combined into a single, copyable block:
+
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```python
+# Complete implementation
+# Generated by: llama3.2
+# Timestamp: 2025-02-07 21:11:24
+
+import random
+from collections import defaultdict
+
+# Define the suits and ranks of a standard deck of cards
+suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
+
+# Define the values of each rank
+values = {
+    '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    '10': 10, 'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14
+}
+
+# Function to create a deck of cards
+def create_deck():
+    deck = [{'suit': suit, 'rank': rank} for suit in suits for rank in ranks]
+    random.shuffle(deck)
+    return deck
+
+# Function to deal two cards from the deck
+def deal_two_cards(deck):
+    return deck.pop(), deck.pop()
+
+# Function to calculate the score for a hand
+def calculate_score(hand):
+    # Count pairs and runs
+    pairs = 0
+    runs = 0
+    for i in range(len(hand) - 1):
+        if hand[i]['rank'] == hand[i+1]['rank']:
+            pairs += 1
+        elif (values[hand[i]['rank']] + values[hand[i+1]['rank']]) % 10 == 0:
+            runs += 1
+
+    # Add points for combinations of cards
+    combo_points = 0
+    for i in range(len(hand) - 2):
+        if hand[i]['rank'] == 'Ace' and values[hand[i]['rank']] + values[hand[i+1]['rank']] >= 15:
+            combo_points += 3
+        elif hand[i]['rank'] == 'Jack' and values[hand[i]['rank']] + values[hand[i+1]['rank']] >= 8:
+            combo_points += 2
+
+    return pairs * 2, runs * 2 + combo_points
+
+# Function to determine the winner of a game
+def play_game():
+    deck = create_deck()
+    player_hand = deal_two_cards(deck)
+    dealer_hand = deal_two_cards(deck)
+
+    print("Player's hand:", [card['rank'] + ' of ' + card['suit'] for card in player_hand])
+    print("Dealer's up card:", [card['rank'] + ' of ' + card['suit'] for card in dealer_hand if deck.index(card) < 2][0])
+
+    score = calculate_score(player_hand)
+    print("Player's score:", score)
+
+    # Deal the crib
+    crib = [deck.pop() for _ in range(4)]
+
+    print("Crib:", [card['rank'] + ' of ' + card['suit'] for card in crib])
+
+    score += calculate_score(crib)
+
+    print("Dealer's hand:", [card['rank'] + ' of ' + card['suit'] for card in dealer_hand])
+    score += calculate_score(dealer_hand)
+
+    print("Dealer's score:", score)
+    if score > 29:
+        return "Player wins"
+    else:
+        return "Dealer wins"
+
+# Run the game
+print(play_game())
+
+```
+</div>
+
+## Usage Instructions
+1. The code snippets above are wrapped in markdown code blocks with copy buttons
+2. You can copy any code block by clicking the "Copy" button
+3. The complete implementation is available in the "Complete Code Summary" section
+4. Make sure to follow any setup instructions provided in the response
+
+## Metadata
+- Model: llama3.2
+- Timestamp: 2025-02-07 21:11:24
+- File: test_llama3.2_20250207_211124.md
