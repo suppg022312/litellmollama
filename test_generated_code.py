@@ -32,28 +32,32 @@ def save_response_to_file(model: str, response: str, prompt: str) -> str:
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f"test_{clean_model}_{timestamp}.md"
     
-    # Add markdown formatting instructions to the prompt
-    markdown_template = """# Model Response from {model}
-Generated on: {timestamp}
+    # Format the content as proper markdown
+    markdown_content = f"""# Model Response: {model}
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-Below is the code solution with proper markdown formatting and copyable code snippets:
+## Original Task
+```
+{prompt}
+```
 
+## Model Solution
 {response}
 
-## How to Use
-Copy the code snippets above and follow the implementation instructions.
+## Usage Instructions
+1. The code snippets above are wrapped in markdown code blocks
+2. You can copy them directly and use in your project
+3. Make sure to follow any setup instructions provided in the response
+
+## Metadata
+- Model: {model}
+- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- File: {filename}
 """
-    formatted_content = markdown_template.format(
-        model=model,
-        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        response=response,
-        prompt=prompt,
-        filename=filename
-    )
     
     try:
-        with open(filename, 'w') as f:
-            f.write(formatted_content)
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
         return filename
     except Exception as e:
         return f"Error saving file: {str(e)}"
@@ -77,18 +81,21 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         
         # Add markdown formatting instructions to the prompt
         enhanced_prompt = f"""Please provide a solution to the following task using proper markdown formatting. 
-Include code snippets wrapped in triple backticks with the appropriate language identifier.
-Make the code easily copyable and include clear section headers.
+Format your entire response as a well-structured markdown document.
 
-Task: {prompt}
+TASK: {prompt}
 
-Format your response with:
-1. Clear markdown headers (##)
-2. Code snippets in ```language
-3. Brief explanations before and after code blocks
-4. Any necessary setup or installation instructions
-5. Example usage if applicable
-"""
+Please follow these formatting rules:
+1. Use markdown headers (##) for sections
+2. Wrap ALL code snippets in triple backticks with language identifier, like:
+   ```python
+   your code here
+   ```
+3. Provide clear explanations before and after code blocks
+4. Include setup/installation instructions if needed
+5. Show example usage where appropriate
+
+Make sure ALL code is in copyable code blocks with proper language tags."""
         
         # Construct API request for Ollama
         url = f"{api_base}/api/generate"
@@ -182,8 +189,13 @@ def test_against_all_models(task: str, progress=gr.Progress()) -> str:
                 # Extract response text - Ollama format
                 response_text = response_data.get("response", "No response content")
                 
-                # Save response to file
-                filename = save_response_to_file(model, response_text)
+                # Save response to markdown file with proper formatting
+                filename = save_response_to_file(
+                    model=model,
+                    response=response_text,
+                    prompt=task  # Include the original task
+                )
+                
                 created_files.append(filename)
                 
                 results.extend([
