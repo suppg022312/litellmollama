@@ -232,9 +232,10 @@ if __name__ == "__main__":
         import yaml
     
     interface.launch(
-        server_name="0.0.0.0",
+        server_name="0.0.0.0",  # Allows external connections
+        server_port=7860,       # Specify a fixed port
+        share=True,             # Creates a public URL
         inbrowser=True,
         show_error=True,
-        debug=True,
-        share=False
+        debug=True
     )
