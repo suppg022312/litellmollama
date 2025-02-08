@@ -9,12 +9,27 @@ from typing import List, Dict
 import yaml
 
 def load_config() -> Dict:
-    """Load configuration from proxy_server_config.yaml"""
+    """Load available models from the LiteLLM API endpoint"""
     try:
-        with open("litellm/proxy_server_config.yaml", "r") as f:
-            return yaml.safe_load(f)
+        response = requests.get("http://dockerdev:4000/v1/models")
+        response.raise_for_status()
+        
+        # Transform the API response into the expected format
+        models_data = response.json()
+        return {
+            "model_list": [
+                {
+                    "model_name": model["id"],
+                    "litellm_params": {
+                        "model": model["id"],
+                        "api_base": "http://dockerdev:4000"
+                    }
+                }
+                for model in models_data["data"]
+            ]
+        }
     except Exception as e:
-        print(f"Error loading config: {e}")
+        print(f"Error loading models from API: {e}")
         return {"model_list": []}
 
 def format_time(seconds: float) -> str:
@@ -182,34 +197,19 @@ This section contains all the necessary code combined into a single, copyable bl
 def call_api_endpoint(model: str, prompt: str) -> Dict:
     """Make API call to test the model with the given prompt"""
     try:
-        # Get API base URL from config
-        config = load_config()
-        model_config = next((m for m in config["model_list"] if m["model_name"] == model), None)
-        
-        if not model_config:
-            return {
-                "success": False,
-                "response": None,
-                "error": f"Model {model} not found in config"
-            }
-        
-        api_base = model_config["litellm_params"]["api_base"]
-        actual_model = model_config["litellm_params"]["model"]
-        
-        # Construct API request for Ollama
-        url = f"{api_base}/api/generate"
+        url = "http://dockerdev:4000/v1/chat/completions"
         headers = {
             "Content-Type": "application/json"
         }
         
-        # Ollama format
         data = {
-            "model": actual_model.split('/')[-1],
-            "prompt": prompt,
+            "model": model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
             "stream": False
         }
         
-        # Make API call with timeout
         print(f"Calling API: {url}")
         print(f"Request data: {data}")
         
@@ -223,7 +223,9 @@ def call_api_endpoint(model: str, prompt: str) -> Dict:
         
         return {
             "success": True,
-            "response": response.json(),
+            "response": {
+                "response": response.json()["choices"][0]["message"]["content"]
+            },
             "error": None
         }
     except requests.exceptions.Timeout:
