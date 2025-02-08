@@ -9,7 +9,7 @@ from typing import List, Dict
 import yaml
 
 def load_config() -> Dict:
-    """Load configuration from config.yaml"""
+    """Load configuration from proxy_server_config.yaml"""
     try:
         with open("litellm/proxy_server_config.yaml", "r") as f:
             return yaml.safe_load(f)
