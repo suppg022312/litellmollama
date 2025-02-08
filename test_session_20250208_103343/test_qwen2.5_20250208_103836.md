@@ -1,0 +1,248 @@
+# Model Response: qwen2.5
+Generated on: 2025-02-08 10:38:36
+
+
+<style>
+.copy-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 1;
+}
+.code-container {
+    position: relative;
+    margin: 10px 0;
+}
+.copy-button:hover {
+    background-color: #45a049;
+}
+.copy-button:active {
+    background-color: #3d8b40;
+}
+</style>
+
+<script>
+function copyCode(buttonElement) {
+    const codeBlock = buttonElement.parentElement.querySelector('code');
+    const range = document.createRange();
+    range.selectNode(codeBlock);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    try {
+        document.execCommand('copy');
+        buttonElement.textContent = 'Copied!';
+        setTimeout(() => {
+            buttonElement.textContent = 'Copy';
+        }, 2000);
+    } catch(e) {
+        console.error('Failed to copy text:', e);
+        buttonElement.textContent = 'Failed to copy';
+    }
+    window.getSelection().removeAllRanges();
+}
+</script>
+
+
+## Original Task
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```
+python tic tac toe game
+
+```
+</div>
+
+## Model Solution
+Sure! Let's create a simple command-line version of the Tic Tac Toe game in Python. This version will support two players taking turns to play against each other.
+
+Here’s how we can break down the process:
+
+1. **Create the Board**: We need to represent the board and display it.
+2. **Player Moves**: Allow players to input their moves.
+3. **Check for Wins or Draws**: After each move, check if a player has won or if the game is a draw.
+
+Let's start with the basic code structure:
+
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```python
+def print_board(board):
+    """Prints the current state of the board."""
+    print("\n".join([" | ".join(row) for row in board]))
+    print("-" * 5)
+
+def check_win(board, player):
+    """Checks if the given player has won."""
+    win_conditions = [
+        [(0, 0), (0, 1), (0, 2)],
+        [(1, 0), (1, 1), (1, 2)],
+        [(2, 0), (2, 1), (2, 2)],
+
+        [(0, 0), (1, 0), (2, 0)],
+        [(0, 1), (1, 1), (2, 1)],
+        [(0, 2), (1, 2), (2, 2)],
+
+        [(0, 0), (1, 1), (2, 2)],
+        [(0, 2), (1, 1), (2, 0)]
+    ]
+    
+    for condition in win_conditions:
+        if all(board[x][y] == player for x, y in condition):
+            return True
+    return False
+
+def is_draw(board):
+    """Checks whether the board is full and no winner."""
+    return all([all(cell != ' ' for cell in row) for row in board])
+
+def main():
+    # Initialize an empty 3x3 board with spaces.
+    board = [[' ']*3 for _ in range(3)]
+    
+    current_player = "X"
+    
+    while True:
+        print_board(board)
+        
+        try:
+            row = int(input(f"Player {current_player}, enter your move (row): "))
+            col = int(input("Enter your move (column): "))
+            
+            if board[row][col] != ' ':
+                print("Cell already occupied, please choose another one.")
+                continue
+            
+            # Make the move
+            board[row][col] = current_player
+            
+            if check_win(board, current_player):
+                print_board(board)
+                print(f"Player {current_player} wins!")
+                break
+                
+            if is_draw(board):
+                print_board(board)
+                print("The game is a draw.")
+                break
+
+            # Switch player
+            current_player = "O" if current_player == "X" else "X"
+
+        except (ValueError, IndexError):
+            print("Invalid input. Please enter row and column numbers from 0 to 2.")
+
+if __name__ == "__main__":
+    main()
+```
+</div>
+
+### Explanation:
+- **print_board(board)**: This function prints the current state of the game board.
+- **check_win(board, player)**: Checks if a given player has won based on all possible winning combinations in Tic Tac Toe.
+- **is_draw(board)**: Determines whether the game is drawn by checking if all cells are filled without any winner.
+- **main()**: Handles user input and updates the board state. It also checks for wins or draws after each move.
+
+### How to Play:
+1. The game will start with player "X".
+2. You'll be prompted to enter row and column numbers (0, 1, or 2) to place your symbol.
+3. After every move, the game checks if there's a winner or a draw.
+
+Feel free to modify this code as per your needs or add more features such as AI opponents for single-player mode!
+
+## Complete Code Summary
+This section contains all the necessary code combined into a single, copyable block:
+
+<div class="code-container">
+<button class="copy-button" onclick="copyCode(this)">Copy</button>
+```python
+# Complete implementation
+# Generated by: qwen2.5
+# Timestamp: 2025-02-08 10:38:36
+
+def print_board(board):
+    """Prints the current state of the board."""
+    print("\n".join([" | ".join(row) for row in board]))
+    print("-" * 5)
+
+def check_win(board, player):
+    """Checks if the given player has won."""
+    win_conditions = [
+        [(0, 0), (0, 1), (0, 2)],
+        [(1, 0), (1, 1), (1, 2)],
+        [(2, 0), (2, 1), (2, 2)],
+
+        [(0, 0), (1, 0), (2, 0)],
+        [(0, 1), (1, 1), (2, 1)],
+        [(0, 2), (1, 2), (2, 2)],
+
+        [(0, 0), (1, 1), (2, 2)],
+        [(0, 2), (1, 1), (2, 0)]
+    ]
+    
+    for condition in win_conditions:
+        if all(board[x][y] == player for x, y in condition):
+            return True
+    return False
+
+def is_draw(board):
+    """Checks whether the board is full and no winner."""
+    return all([all(cell != ' ' for cell in row) for row in board])
+
+def main():
+    # Initialize an empty 3x3 board with spaces.
+    board = [[' ']*3 for _ in range(3)]
+    
+    current_player = "X"
+    
+    while True:
+        print_board(board)
+        
+        try:
+            row = int(input(f"Player {current_player}, enter your move (row): "))
+            col = int(input("Enter your move (column): "))
+            
+            if board[row][col] != ' ':
+                print("Cell already occupied, please choose another one.")
+                continue
+            
+            # Make the move
+            board[row][col] = current_player
+            
+            if check_win(board, current_player):
+                print_board(board)
+                print(f"Player {current_player} wins!")
+                break
+                
+            if is_draw(board):
+                print_board(board)
+                print("The game is a draw.")
+                break
+
+            # Switch player
+            current_player = "O" if current_player == "X" else "X"
+
+        except (ValueError, IndexError):
+            print("Invalid input. Please enter row and column numbers from 0 to 2.")
+
+if __name__ == "__main__":
+    main()
+
+```
+</div>
+
+## Usage Instructions
+1. The code snippets above are wrapped in markdown code blocks with copy buttons
+2. You can copy any code block by clicking the "Copy" button
+3. The complete implementation is available in the "Complete Code Summary" section
+4. Make sure to follow any setup instructions provided in the response
+
+## Metadata
+- Model: qwen2.5
+- Timestamp: 2025-02-08 10:38:36
+- File: test_qwen2.5_20250208_103836.md
